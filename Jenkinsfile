@@ -10,6 +10,16 @@ pipeline {
 
     stages {
 
+        stage('Notify Start') {
+            steps {
+                emailext (
+                    subject: "Build Started: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: "The build has started.\nCheck it here: ${env.BUILD_URL}",
+                    to: 'yashyashwanthgowdan@gmail.com'
+                )
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: "${env.REPO}"
@@ -18,17 +28,15 @@ pipeline {
         
         stage('Build') {
             steps {
-            sh '''
-            echo "Creating virtual environment..."
-            python3 -m venv venv
-            echo "Activating virtual environment and installing dependencies..."
-            . venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            '''
-                
+                sh '''
+                echo "Creating virtual environment..."
+                python3 -m venv venv
+                echo "Activating virtual environment and installing dependencies..."
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                '''
             }
-            
         }
 
         stage('Test') {
@@ -59,11 +67,22 @@ pipeline {
     }
 
     post {
-        failure {
-            echo "❌ Build failed. Check console output for errors."
-        }
         success {
-            echo "✅ Pipeline completed successfully!"
+            emailext (
+                subject: "Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "✅ Build succeeded.\nCheck details: ${env.BUILD_URL}",
+                to: 'yashyashwanthgowdan@gmail.com'
+            )
+        }
+        failure {
+            emailext (
+                subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "❌ Build failed.\nCheck logs: ${env.BUILD_URL}",
+                to: 'yashyashwanthgowdan@gmail.com'
+            )
+        }
+        always {
+            echo "Build completed with result: ${currentBuild.currentResult}"
         }
     }
 }
